@@ -102,6 +102,8 @@ class Gateway extends StaticModel
             $link = 'https://dashboard.stripe.com/account/apikeys';
         } elseif ($this->id == 59) {
             $link = 'https://www.forte.net/';
+        } elseif ($this->id == 66) {
+            $link = 'https://exactpay.com/';
         }
 
         return $link;
@@ -215,6 +217,12 @@ class Gateway extends StaticModel
                     // GatewayType::PRZELEWY24 => ['refund' => false, 'token_billing' => false],
                     // GatewayType::SOFORT => ['refund' => false, 'token_billing' => false],
                 ]; //Paypal PPCP
+            case 66:
+                return [
+                    GatewayType::CREDIT_CARD => ['refund' => true, 'token_billing' => false], // Exact
+                    GatewayType::BANK_TRANSFER => ['refund' => true, 'token_billing' => false, 'webhooks' => [' ']],
+                ];
+
             default:
                 return [];
         }

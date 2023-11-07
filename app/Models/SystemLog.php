@@ -150,6 +150,8 @@ class SystemLog extends Model
 
     const TYPE_PAYPAL_PPCP = 323;
 
+    const TYPE_EXACT = 324;
+
     const TYPE_QUOTA_EXCEEDED = 400;
 
     const TYPE_UPSTREAM_FAILURE = 401;
@@ -303,6 +305,8 @@ class SystemLog extends Model
                 return "Payfast";
             case self::TYPE_FORTE:
                 return "Forte";
+            case self::TYPE_EXACT:
+                return "Exact";
             default:
                 return 'undefined';
         }
