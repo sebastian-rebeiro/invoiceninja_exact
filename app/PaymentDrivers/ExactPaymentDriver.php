@@ -15,6 +15,8 @@ use App\Models\SystemLog;
 use App\Models\GatewayType;
 use App\Utils\Traits\MakesHash;
 
+use App\PaymentDrivers\Exact\CreditCard;
+
 class ExactPaymentDriver extends BaseDriver
 {
     use MakesHash;
@@ -32,6 +34,19 @@ class ExactPaymentDriver extends BaseDriver
     public static $methods = [
         GatewayType::CREDIT_CARD => CreditCard::class, //maps GatewayType => Implementation class
     ];
+
+    /**
+     * Returns the gateway types.
+     */
+    public function gatewayTypes(): array
+    {
+        $types = [];
+
+        $types[] = GatewayType::CREDIT_CARD;
+        // $types[] = GatewayType::BANK_TRANSFER;
+
+        return $types;
+    }
 
     const SYSTEM_LOG_TYPE = SystemLog::TYPE_EXACT; //define a constant for your gateway ie TYPE_YOUR_CUSTOM_GATEWAY - set the const in the SystemLog model
 
