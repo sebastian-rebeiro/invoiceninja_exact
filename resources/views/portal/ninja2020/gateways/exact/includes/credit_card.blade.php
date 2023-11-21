@@ -1,12 +1,19 @@
+<style>
+    #test iframe{
+ margin-right:300px;
+}
+</style>
 <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
      style="display: flex!important; justify-content: center!important;" id="authorize--credit-card-container">
-    <div class="card-js" id="my-card" data-capture-name="true">
+    <!-- <div class="card-js" id="my-card" data-capture-name="true" name="Test">
         <input class="name" id="cardholder_name" name="card-holders-name" placeholder="{{ ctrans('texts.name')}}">
         <input class="card-number my-custom-class" id="card_number" name="card-number">
         <input class="expiry-month" name="expiry-month" id="expiration_month">
         <input class="expiry-year" name="expiry-year" id="expiration_year">
         <input class="cvc" name="cvc" id="cvv">
-    </div>
+    </div> -->
+    <div id="test"></div>
+    <!-- </div id="postal"> -->
 
     <div id="errors"></div>
 </div>

@@ -30,6 +30,12 @@
         }
     ],
     "type": "project",
+    "repositories": [
+        {
+            "type": "github",
+            "url": "https://github.com/speakeasy-sdks/exactpayments-php.git"
+        }
+    ],
     "require": {
         "php": "^8.1|^8.2",
         "ext-dom": "*",
@@ -100,7 +106,8 @@
         "twilio/sdk": "^6.40",
         "webpatser/laravel-countries": "dev-master#75992ad",
         "wepay/php-sdk": "^0.3",
-        "wildbit/postmark-php": "^4.0"
+        "wildbit/postmark-php": "^4.0",
+        "thelogicstudio/exactpayments": "*"
     },
     "require-dev": {
         "php": "^8.1|^8.2",
