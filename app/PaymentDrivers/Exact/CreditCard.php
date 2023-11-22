@@ -100,7 +100,7 @@ class CreditCard
         $data = [
             'payment_meta' => $payment_meta,
             'token' => $request->token,
-            'payment_method_id' => 1
+            'payment_method_id' => GatewayType::CREDIT_CARD,
         ];
         
         $this->exact->storeGatewayToken($data);
