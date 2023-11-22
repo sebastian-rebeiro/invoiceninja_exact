@@ -104,7 +104,7 @@
 
         exact.on("payment-failed", (payload) => {
             var errors = '<div class="alert alert-failure mb-4"><ul><li>'+ params.response_description +'</li></ul></div>';
-            document.getElementById("forte_errors").innerHTML = errors;
+            document.getElementById("exact_errors").innerHTML = errors;
             console.log(payload)
         });
 

@@ -1,8 +1,7 @@
 @extends('portal.ninja2020.layout.payments', ['gateway_title' => ctrans('texts.payment_type_credit_card'), 'card_title' => ctrans('texts.payment_type_credit_card')])
 
 @section('gateway_head')
-    <meta name="authorize-public-key" content="{{ $public_client_id }}">
-    <meta name="authorize-login-id" content="{{ $api_login_id }}">
+
 
     <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
     <script src="{{ asset('js/clients/payments/card-js.min.js') }}"></script>
