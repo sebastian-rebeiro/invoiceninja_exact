@@ -6,7 +6,7 @@
     <meta name="credit-card-invalid" content="{{ ctrans('texts.credit_card_invalid') }}">
 
     <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
-    <script src="{{ asset('js/clients/payments/card-js.min.js') }}"></script>
+    <!-- <script src="{{ asset('js/clients/payments/card-js.min.js') }}"></script> -->
     <script src="https://api.exactpaysandbox.com/js/v1/exact.js"></script>
 
     <link href="{{ asset('css/card-js.min.css') }}" rel="stylesheet" type="text/css">
@@ -88,6 +88,10 @@
             exact.tokenize();
         }
         
+        // function submitForm(){
+        //     document.getElementById('server_response').submit()
+        // }
+
         console.log(preauthData);
 
         exact.on("payment-complete", (payload) => {
@@ -97,9 +101,8 @@
             document.getElementById('expiry_month').value  = payload.expiry_month;
             document.getElementById('expiry_year').value  = payload.expiry_year;
             document.getElementById('last4').value  = payload.last4;
-            document.getElementById('myForm').submit();
+            document.getElementById('server_response').submit();
             // submit your form to your backend
-            document.forms.server_response.submit();
         });
 
         exact.on("payment-failed", (payload) => {
@@ -110,11 +113,11 @@
 
     </script>
 
-    @if($gateway->company_gateway->getConfigField('testMode'))
+    <!-- @if($gateway->company_gateway->getConfigField('testMode'))
         <script src="https://jstest.authorize.net/v1/Accept.js" charset="utf-8"></script>
     @else
         <script src="https://js.authorize.net/v1/Accept.js" charset="utf-8"></script>
     @endif
 
-    <script src="{{ asset('js/clients/payment_methods/authorize-authorize-card.js') }}"></script>
+    <script src="{{ asset('js/clients/payment_methods/authorize-authorize-card.js') }}"></script> -->
 @endsection
