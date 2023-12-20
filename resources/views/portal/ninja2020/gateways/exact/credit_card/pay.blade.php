@@ -46,28 +46,38 @@
         @endisset
 
         <label>
-            <input
-                type="radio"
-                id="toggle-payment-with-credit-card"
-                class="form-radio cursor-pointer"
-                name="payment-type"
-                checked/>
-            <span class="ml-1 cursor-pointer">{{ __('texts.new_card') }}</span>
+            <a href="http://localhost:8000/client/payment_methods/create?method=1" class="button button-primary bg-primary" style="font-size: .7rem;
+    padding: .5rem 0.5rem;
+    background-color: #9ebed9;">
+                <!-- <input
+                    type="radio"
+                    id="toggle-payment-with-credit-card"
+                    class="form-radio cursor-pointer"
+                    name="payment-type"
+                    checked/> -->
+                <span class="ml-1 cursor-pointer">{{ __('texts.new_card') }}</span>
+            </a>
         </label>
     @endcomponent
 
     @include('portal.ninja2020.gateways.includes.save_card')
 
-    @include('portal.ninja2020.gateways.authorize.includes.credit_card')
-    @include('portal.ninja2020.gateways.includes.pay_now')
+    <!-- @include('portal.ninja2020.gateways.authorize.includes.credit_card') -->
+    @include('portal.ninja2020.gateways.exact.includes.pay_now')
 @endsection
 
 @section('gateway_footer')
     @if($gateway->company_gateway->getConfigField('testMode'))
-        <script src="https://jstest.authorize.net/v1/Accept.js" charset="utf-8"></script>
+        <!-- <script src="https://jstest.authorize.net/v1/Accept.js" charset="utf-8"></script> -->
     @else
-        <script src="https://js.authorize.net/v1/Accept.js" charset="utf-8"></script>
+        <!-- <script src="https://js.authorize.net/v1/Accept.js" charset="utf-8"></script> -->
     @endif
 
-    <script src="{{ asset('js/clients/payments/authorize-credit-card-payment.js') }}"></script>
+    <!-- <script src="{{ asset('js/clients/payments/authorize-credit-card-payment.js') }}"></script> -->
 @endsection
+
+<script>
+    var gatewaydata = @json($gateway);
+    console.log(gatewaydata)
+
+</script>
