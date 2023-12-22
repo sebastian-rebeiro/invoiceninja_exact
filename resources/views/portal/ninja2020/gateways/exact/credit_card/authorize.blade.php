@@ -73,7 +73,7 @@
         
         const components = exact.components({orderId: preauthData.id})
 
-        components.addCard('test'
+        components.addCard('card_input'
         , {
             billingAddress: {
                 type: "minimal"

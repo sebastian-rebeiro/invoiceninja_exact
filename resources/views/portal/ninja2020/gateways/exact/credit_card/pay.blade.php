@@ -40,8 +40,8 @@
                         data-token="{{ $token->hashed_id }}"
                         name="payment-type"
                         class="form-radio cursor-pointer toggle-payment-with-token"/>
-                    <span class="ml-1 cursor-pointer">**** {{ optional($token->meta)->last4 }}</span>
-                </label>
+                        <button class="ml-1 cursor-pointer">**** {{ optional($token->meta)->last4 }}</button>
+                    </label>
             @endforeach
         @endisset
 
@@ -75,9 +75,3 @@
 
     <!-- <script src="{{ asset('js/clients/payments/authorize-credit-card-payment.js') }}"></script> -->
 @endsection
-
-<script>
-    var gatewaydata = @json($gateway);
-    console.log(gatewaydata)
-
-</script>
