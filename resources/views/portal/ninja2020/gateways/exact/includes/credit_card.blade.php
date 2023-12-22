@@ -1,5 +1,5 @@
 <style>
-    #test iframe{
+    #card_input iframe{
  margin-right:300px;
 }
 </style>
@@ -12,7 +12,7 @@
         <input class="expiry-year" name="expiry-year" id="expiration_year">
         <input class="cvc" name="cvc" id="cvv">
     </div> -->
-    <div id="test"></div>
+    <div id="card_input"></div>
     <!-- </div id="postal"> -->
 
     <div id="errors"></div>

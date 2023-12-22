@@ -39,6 +39,11 @@ class CreditCard
     private $sdk;
 
 
+    /**
+     * Constructs a new CreditCard instance.
+     *
+     * @param ExactPaymentDriver $exact The payment driver instance.
+    */
     public function __construct(ExactPaymentDriver $exact)
     {
         $this->exact = $exact;
@@ -54,59 +59,47 @@ class CreditCard
         $builder = ExactPayments\ExactPayments::builder()
         ->setSecurity($secret);
 
+        $SANDBOX = 0;
+        $PRODUCTION = 1;
+
         if ($test_mode) {
-            $this->sdk = $builder->build();
+            $this->sdk = $builder->setServerIndex($SANDBOX)->build();
         } else {
-            $this->sdk = $builder->setServerIndex(1)->build();
+            $this->sdk = $builder->setServerIndex($PRODUCTION)->build();
         }
     }
 
+    /**
+     * Prepares and renders the authorization view.
+     *
+     * @param array $data Data to be used in the view.
+     * @return mixed The rendered view.
+     */
     public function authorizeView(array $data)
     {
-        $request = new Operations\PostAccountAccountIdOrdersRequest();
+        $request = $this->createOrderRequest();
 
-        $request->accountId = $this->exact_accountid;
-        $request->order = new Shared\Order();
-        $request->order->amount = 1;
-        $request->order->capture = false;
-        $request->order->reference = new Shared\Reference();
-        $request->order->reference->referenceNo = $this->exact->client->id;
         try {
             $response = $this->sdk->orders->postAccountAccountIdOrders($request);
         }
         catch (\Throwable $th) {
             throw $th;
         }
-        if ($response->statusCode === 403) {
-            SystemLogger::dispatch(
-                ['response' => $response, 'data' => $request->order],
-                SystemLog::CATEGORY_GATEWAY_RESPONSE,
-                SystemLog::EVENT_GATEWAY_ERROR,
-                SystemLog::TYPE_EXACT,
-                $this->exact->client,
-                $this->exact->client->company,
-            );
-            $error = ['code' => 403, 'message' => "Invalid credentials"];
-            return render('gateways.unsuccessful', $error);
+        if ($response->statusCode != 201) {
+            return $this->exact->handleResponseError($response->statusCode, $response, $request);
         }
-        else if (is_null($response->orderResponse)) {
-            // throw new Exception("API ERROR");
-            SystemLogger::dispatch(
-                ['response' => $response, 'data' => $request->order],
-                SystemLog::CATEGORY_GATEWAY_RESPONSE,
-                SystemLog::EVENT_GATEWAY_FAILURE,
-                SystemLog::TYPE_EXACT,
-                $this->exact->client,
-                $this->exact->client->company,
-            );
-            $error = ['code' => 500, 'message' => "Undefined Gateway Error"];
-            return render('gateways.unsuccessful', $error);
-        }
+
         $data['preauth'] = $response->orderResponse;
         $data['gateway'] = $this->exact;
         return render('gateways.exact.credit_card.authorize', $data);
     }
 
+    /**
+     * Handles the response after a credit card authorization.
+     *
+     * @param \Illuminate\Http\Request $request The request object containing credit card details.
+     * @return \Illuminate\Http\RedirectResponse A redirect to the payment methods index.
+     */
     public function authorizeResponse($request)
     {
         $payment_meta = new \stdClass;
@@ -127,7 +120,12 @@ class CreditCard
         return redirect()->route('client.payment_methods.index')->withSuccess('Payment Method added.');
     }
 
-
+    /**
+     * Prepares and renders the payment view.
+     *
+     * @param array $data Data to be used in the view.
+     * @return mixed The rendered view.
+     */
     public function paymentView(array $data)
     {
         $this->exact->payment_hash->data = array_merge((array) $this->exact->payment_hash->data, $data);
@@ -137,10 +135,16 @@ class CreditCard
         return render('gateways.exact.credit_card.pay', $data);
     }
 
+    /**
+     * Handles the response after a payment is made.
+     *
+     * @param PaymentResponseRequest $request The payment response request object.
+     * @return mixed A redirect to the invoices page.
+     */
     public function paymentResponse(PaymentResponseRequest $request)
     {
         $payment_hash = PaymentHash::where('hash', $request->input('payment_hash'))->firstOrFail();
-        // $invoice_totals = $payment_hash->data->total->invoice_totals;
+        $invoice_totals = $payment_hash->data->total->invoice_totals;
         // $this->cdebug(['data' => $payment_hash]);
         $token = $payment_hash->data->tokens[(int)$payment_hash->data->payment_method_id - 1];
 
@@ -157,7 +161,7 @@ class CreditCard
             // $this->cdebug(['request'> $request, 'response' => $response ,'data' => $payment_hash]);
         } catch (\Throwable $th) {
             SystemLogger::dispatch(
-                ['data' => $request],
+                ['request' => $request],
                 SystemLog::CATEGORY_GATEWAY_RESPONSE,
                 SystemLog::EVENT_GATEWAY_FAILURE,
                 SystemLog::TYPE_EXACT,
@@ -167,41 +171,36 @@ class CreditCard
             throw $th;
         }
 
-        if ($response->twoHundredAndOneApplicationJsonPayment !== null) {
+        if ($response->statusCode != 201) {
+            return $this->exact->handleResponseError($response->statusCode, $response, $request);
+        } 
             
-            SystemLogger::dispatch(
-                ['request'=> gettype($response->twoHundredAndOneApplicationJsonPayment), 'response' => $response ,'data' => $payment_hash],
-                SystemLog::CATEGORY_GATEWAY_RESPONSE,
-                SystemLog::EVENT_GATEWAY_SUCCESS,
-                SystemLog::TYPE_EXACT,
-                $this->exact->client,
-                $this->exact->client->company,
-            );
+        SystemLogger::dispatch(
+            ['response' => $response ,'data' => $payment_hash],
+            SystemLog::CATEGORY_GATEWAY_RESPONSE,
+            SystemLog::EVENT_GATEWAY_SUCCESS,
+            SystemLog::TYPE_EXACT,
+            $this->exact->client,
+            $this->exact->client->company,
+        );
 
-            $data = [
-                'payment_type' => PaymentType::parseCardType(strtolower($token->meta->brand)) ?: PaymentType::CREDIT_CARD_OTHER,
-                'amount' => $payment_hash->data->amount_with_fee,
-                'gateway_type_id' => GatewayType::CREDIT_CARD,
-                'transaction_reference' => $response->twoHundredAndOneApplicationJsonPayment->paymentid,
-                // 'authorization' => $response->twoHundredAndOneApplicationJsonPayment->authorization
-            ];
-            $payment = $this->exact->createPayment($data, Payment::STATUS_COMPLETED);
-            return redirect('client/invoices')->withSuccess('Invoice paid.');
-
-        } else if ($response->statusCode === 403) {
-            SystemLogger::dispatch(
-                ['response' => $response, 'data' => $request],
-                SystemLog::CATEGORY_GATEWAY_RESPONSE,
-                SystemLog::EVENT_GATEWAY_ERROR,
-                SystemLog::TYPE_EXACT,
-                $this->exact->client,
-                $this->exact->client->company,
-            );
-            $error = ['code' => 403, 'message' => "Invalid credentials"];
-            return render('gateways.unsuccessful', $error);
-        }
+        $data = [
+            'payment_type' => PaymentType::parseCardType(strtolower($token->meta->brand)) ?: PaymentType::CREDIT_CARD_OTHER,
+            'amount' => $payment_hash->data->amount_with_fee,
+            'gateway_type_id' => GatewayType::CREDIT_CARD,
+            'transaction_reference' => $response->twoHundredAndOneApplicationJsonPayment["paymentId"],
+            'custom_value1' => $response->twoHundredAndOneApplicationJsonPayment["authorization"]
+        ];
+        $this->exact->createPayment($data, Payment::STATUS_COMPLETED);
+            
+        return redirect('client/invoices')->withSuccess('Invoice paid.');
     }
 
+    /**
+     * Logs debugging information.
+     *
+     * @param array $data The data to be logged.
+     */
     public function cdebug(array $data) {
         SystemLogger::dispatch(
             ['data' => $data],
@@ -211,5 +210,23 @@ class CreditCard
             $this->exact->client,
             $this->exact->client->company,
         );
+    }
+
+    /**
+     * Creates an order request object.
+     *
+     * @return Operations\PostAccountAccountIdOrdersRequest The order request object.
+     */
+    private function createOrderRequest()
+    {
+        $request = new Operations\PostAccountAccountIdOrdersRequest();
+        $request->accountId = $this->exact_accountid;
+        $request->order = new Shared\Order();
+        $request->order->amount = 1;
+        $request->order->capture = false;
+        $request->order->reference = new Shared\Reference();
+        $request->order->reference->referenceNo = $this->exact->client->id;
+
+        return $request;
     }
 }
