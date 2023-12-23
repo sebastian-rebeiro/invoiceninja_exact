@@ -85,137 +85,98 @@ class ExactPaymentDriver extends BaseDriver
 
     public function refund(Payment $payment, $amount, $return_client_response = false)
     {
-        $security = new Shared\Security();
-        $security->apiKey = $this->company_gateway->getConfigField("Apikey");
+        $secret = new Shared\Security();
+        $secret->apiKey = $this->company_gateway->getConfigField('Apikey');
 
         $builder = ExactPayments\ExactPayments::builder()
-        ->setSecurity($security);
+        ->setSecurity($secret);
 
         $SANDBOX = 0;
         $PRODUCTION = 1;
 
-        if ($this->company_gateway->getConfigField("testMode")) {
+        if ($this->company_gateway->getConfigField('testMode')) {
             $sdk = $builder->setServerIndex($SANDBOX)->build();
         } else {
             $sdk = $builder->setServerIndex($PRODUCTION)->build();
         }
         
-        $request = new Operations\AccountRefundPaymentRequest();
-
-        $request->referencedPayment = new Shared\ReferencedPayment();
-        $request->referencedPayment->amount = (int)($amount * 100);
-        $request->referencedPayment->authorization = $payment->custom_value1;
-        $request->accountId = $this->company_gateway->getConfigField("Accountid");
-        $request->paymentId = $payment->transaction_reference;
-
+        $payment_request = new Operations\AccountGetPaymentRequest();
+        $payment_request->accountId = $this->company_gateway->getConfigField('Accountid');
+        $payment_request->paymentId = $payment->transaction_reference;
+        
         try {
-            $response = $sdk->payments->accountRefundPayment($request);
+            $payment_response = $sdk->payments->accountGetPayment($payment_request);
         } catch (\Throwable $th) {
             SystemLogger::dispatch(
-                ['request' => $request],
+                ['request' => $payment_request],
                 SystemLog::CATEGORY_GATEWAY_RESPONSE,
                 SystemLog::EVENT_GATEWAY_FAILURE,
-                SystemLog::TYPE_EXACT,
+                SystemLog::TYPE_FORTE,
                 $this->client,
                 $this->client->company,
             );
             throw $th;
         }
+        if ($payment_response->statusCode != 200) {
+            $error_msg = $this->handleResponseError($payment_response->statusCode, $payment_response, $payment_request, true);
+                
+            $message = [
+                'action' => 'refund', 
+                'server_response' => $error_msg,
+                'data' => $payment->paymentables,
+            ];
 
-        // $forte_base_uri = "https://sandbox.forte.net/api/v3/";
-        // if ($this->company_gateway->getConfigField('testMode') == false) {
-        //     $forte_base_uri = "https://api.forte.net/v3/";
-        // }
-        // $forte_api_access_id = $this->company_gateway->getConfigField('apiAccessId');
-        // $forte_secure_key = $this->company_gateway->getConfigField('secureKey');
-        // $forte_auth_organization_id = $this->company_gateway->getConfigField('authOrganizationId');
-        // $forte_organization_id = $this->company_gateway->getConfigField('organizationId');
-        // $forte_location_id = $this->company_gateway->getConfigField('locationId');
-
-        // try {
-        //     $curl = curl_init();
-
-        //     curl_setopt_array($curl, [
-        //         CURLOPT_URL => $forte_base_uri.'organizations/'.$forte_organization_id.'/locations/'.$forte_location_id.'/transactions',
-        //         CURLOPT_RETURNTRANSFER => true,
-        //         CURLOPT_ENCODING => '',
-        //         CURLOPT_MAXREDIRS => 10,
-        //         CURLOPT_TIMEOUT => 0,
-        //         CURLOPT_FOLLOWLOCATION => true,
-        //         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        //         CURLOPT_CUSTOMREQUEST => 'POST',
-        //         CURLOPT_POSTFIELDS =>'{
-        //              "action":"reverse", 
-        //              "authorization_amount":'.$amount.',
-        //              "original_transaction_id":"'.$payment->transaction_reference.'",
-        //              "authorization_code": "9ZQ754"
-        //       }',
-        //         CURLOPT_HTTPHEADER => [
-        //           'Content-Type: application/json',
-        //           'X-Forte-Auth-Organization-Id: '.$forte_organization_id,
-        //           'Authorization: Basic '.base64_encode($forte_api_access_id.':'.$forte_secure_key)
-        //         ],
-        //       ]);
-
-        //     $response = curl_exec($curl);
-        //     $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-
-        //     curl_close($curl);
-
-        //     $response=json_decode($response);
-        // } catch (\Throwable $th) {
-        //     $message = [
-        //         'action' => 'error',
-        //         'data' => $th,
-        //     ];
-
-        //     SystemLogger::dispatch(
-        //         $message,
-        //         SystemLog::CATEGORY_GATEWAY_RESPONSE,
-        //         SystemLog::EVENT_GATEWAY_FAILURE,
-        //         SystemLog::TYPE_FORTE,
-        //         $this->client,
-        //         $this->client->company,
-        //     );
-        // }
-
+            return [
+                'transaction_reference' => $payment->transaction_reference,
+                'transaction_response' => $payment_response,
+                'success' => false,
+                'description' => $message,
+                'code' => $payment_response->statusCode
+            ];
+        }
+        $authorization = $payment_response->twoHundredApplicationJsonPayment['authorization'];
+        
+        $refund_request = new Operations\AccountRefundPaymentRequest();
+        
+        $refund_request->referencedPayment = new Shared\ReferencedPayment();
+        $refund_request->referencedPayment->amount = (int)($amount * 100);
+        $refund_request->referencedPayment->authorization = $authorization;
+        $refund_request->accountId = $this->company_gateway->getConfigField("organizationId");
+        $refund_request->paymentId = $payment->transaction_reference;
+        
+        try {
+            $response = $sdk->payments->accountRefundPayment($refund_request);
+        } catch (\Throwable $th) {
+            SystemLogger::dispatch(
+                ['request' => $refund_request],
+                SystemLog::CATEGORY_GATEWAY_RESPONSE,
+                SystemLog::EVENT_GATEWAY_FAILURE,
+                SystemLog::TYPE_FORTE,
+                $this->client,
+                $this->client->company,
+            );
+            throw $th;
+        }
+                    
         if ($response->statusCode != 201) {
-            $this->handleResponseError($response->statusCode, $response, $request);
-
+            $message = $this->handleResponseError($response->statusCode, $response, $refund_request, true);
+                        
             return [
                 'transaction_reference' => $payment->transaction_reference,
                 'transaction_response' => $response,
                 'success' => false,
-                'description' => $payment->paymentables,
+                'description' => $message,
                 'code' => $response->statusCode
             ];
         }
+        
+        
         $message = [
             'action' => 'refund', 
             'server_response' => $response,
             'data' => $payment->paymentables,
         ];
-
-
-        // if ($httpcode>299) {
-        //     SystemLogger::dispatch(
-        //         $message,
-        //         SystemLog::CATEGORY_GATEWAY_RESPONSE,
-        //         SystemLog::EVENT_GATEWAY_FAILURE,
-        //         SystemLog::TYPE_FORTE,
-        //         $this->client,
-        //         $this->client->company,
-        //     );
-            
-        //     return [
-        //         'transaction_reference' => $payment->transaction_reference,
-        //         'transaction_response' => $response,
-        //         'success' => false,
-        //         'description' => $payment->paymentables,
-        //         'code' => 422,
-        //     ];
-        // }
-
+                    
         SystemLogger::dispatch(
             $message,
             SystemLog::CATEGORY_GATEWAY_RESPONSE,
@@ -224,7 +185,7 @@ class ExactPaymentDriver extends BaseDriver
             $this->client,
             $this->client->company,
         );
-
+                    
         return [
             'transaction_reference' => $payment->transaction_reference,
             'transaction_response' => $response,
@@ -233,11 +194,6 @@ class ExactPaymentDriver extends BaseDriver
             'code' => $response->statusCode,
         ];
     }
-
-    // public function tokenBilling(ClientGatewayToken $cgt, PaymentHash $payment_hash)
-    // {
-    //     return $this->payment_method->yourTokenBillingImplmentation(); //this is your custom implementation from here
-    // }
 
     public function handleResponseError(int $statuscode, mixed $response, mixed $request)
     {
