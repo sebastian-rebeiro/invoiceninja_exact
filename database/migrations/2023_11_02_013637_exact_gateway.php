@@ -21,11 +21,11 @@ return new class extends Migration
         $exact = new Gateway;
         $exact->id = 66;
         $exact->name = 'ExactPay'; 
-        $exact->key = Str::lower('AalocZyXwSn3v3vHB777QmcdgFIekaM8'); 
-        $exact->provider = 'ExactPay';
+        $exact->key = 'aaloczyxwsn3v3vhb777qmcdgfiekam8'; 
+        $exact->provider = 'Exact';
         $exact->is_offsite = false;
         $exact->fields = \json_encode($fields);
-        $exact->visible = true;
+        $exact->visible = 1;
         $exact->site_url = 'https://exactpay.com/';
         $exact->default_gateway_type_id = 1;
         $exact->save();

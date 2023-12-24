@@ -38,7 +38,8 @@ class ExactPaymentDriver extends BaseDriver
     public $payment_method; //initialized payment method
 
     public static $methods = [
-        GatewayType::CREDIT_CARD => CreditCard::class, //maps GatewayType => Implementation class
+        GatewayType::CREDIT_CARD => CreditCard::class,
+        GatewayType::BANK_TRANSFER => ACH::class, //maps GatewayType => Implementation class
     ];
 
     /**
@@ -49,7 +50,7 @@ class ExactPaymentDriver extends BaseDriver
         $types = [];
 
         $types[] = GatewayType::CREDIT_CARD;
-        // $types[] = GatewayType::BANK_TRANSFER;
+        $types[] = GatewayType::BANK_TRANSFER;
 
         return $types;
     }
@@ -195,7 +196,7 @@ class ExactPaymentDriver extends BaseDriver
         ];
     }
 
-    public function handleResponseError(int $statuscode, mixed $response, mixed $request)
+    public function handleResponseError(int $statuscode, mixed $response, mixed $request, bool $message = false)
     {
         $customMessage = match ($statuscode) {
             400 => "Bad Request",
@@ -207,11 +208,11 @@ class ExactPaymentDriver extends BaseDriver
             503 => "Service Unavailable",
             default => "Unknown Error"
         };
-    
+                        
         SystemLogger::dispatch(
             [
                 'response' => $response,
-                'data' => $request->order,
+                'request' => $request,
                 'message' => $customMessage
             ],
             SystemLog::CATEGORY_GATEWAY_RESPONSE,
@@ -221,7 +222,10 @@ class ExactPaymentDriver extends BaseDriver
             $this->client->company,
         );
 
-        $error = ['code' => $statuscode, 'message' => $statuscode];
+        $error = ['code' => $statuscode, 'message' => $customMessage];
+        if ($message) {
+            return $customMessage;
+        }
 
         return render('gateways.unsuccessful', $error);
     }

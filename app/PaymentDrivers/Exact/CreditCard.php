@@ -48,8 +48,8 @@ class CreditCard
     {
         $this->exact = $exact;
 
-        $this->exact_api_key = $this->exact->company_gateway->getConfigField('Apikey');
-        $this->exact_accountid =  $this->exact->company_gateway->getConfigField('Accountid');
+        $this->exact_api_key = $this->exact->company_gateway->getConfigField('apikey');
+        $this->exact_accountid =  $this->exact->company_gateway->getConfigField('accountid');
 
         $test_mode = $this->exact->company_gateway->getConfigField('testMode');
 
