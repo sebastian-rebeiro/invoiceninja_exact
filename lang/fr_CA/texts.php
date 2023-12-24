@@ -5152,6 +5152,8 @@ Lorsque les montant apparaîtront sur votre relevé, veuillez revenir sur cette 
     'show_document_preview' => 'Afficher la visualisation de document',
     'cash_accounting' => 'Comptabilité de caisse',
     'click_or_drop_files_here' => 'Cliquez ou déposez les fichiers ici',
+    'transit-number' => 'Numéro d\'identification',
+    'institution-number' => 'Numéro de l\'institution',
     'set_public' => 'Public',
     'set_private' => 'Privé',
     'individual' => 'Individuel',
