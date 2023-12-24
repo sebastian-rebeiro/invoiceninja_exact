@@ -87,7 +87,7 @@ class ExactPaymentDriver extends BaseDriver
     public function refund(Payment $payment, $amount, $return_client_response = false)
     {
         $secret = new Shared\Security();
-        $secret->apiKey = $this->company_gateway->getConfigField('Apikey');
+        $secret->apiKey = $this->company_gateway->getConfigField('apikey');
 
         $builder = ExactPayments\ExactPayments::builder()
         ->setSecurity($secret);
@@ -102,7 +102,7 @@ class ExactPaymentDriver extends BaseDriver
         }
         
         $payment_request = new Operations\AccountGetPaymentRequest();
-        $payment_request->accountId = $this->company_gateway->getConfigField('Accountid');
+        $payment_request->accountId = $this->company_gateway->getConfigField('accountid');
         $payment_request->paymentId = $payment->transaction_reference;
         
         try {
@@ -112,7 +112,7 @@ class ExactPaymentDriver extends BaseDriver
                 ['request' => $payment_request],
                 SystemLog::CATEGORY_GATEWAY_RESPONSE,
                 SystemLog::EVENT_GATEWAY_FAILURE,
-                SystemLog::TYPE_FORTE,
+                SystemLog::TYPE_EXACT,
                 $this->client,
                 $this->client->company,
             );
@@ -121,17 +121,17 @@ class ExactPaymentDriver extends BaseDriver
         if ($payment_response->statusCode != 200) {
             $error_msg = $this->handleResponseError($payment_response->statusCode, $payment_response, $payment_request, true);
                 
-            $message = [
-                'action' => 'refund', 
-                'server_response' => $error_msg,
-                'data' => $payment->paymentables,
-            ];
+            // $message = [
+            //     'action' => 'refund', 
+            //     'server_response' => $error_msg,
+            //     'data' => $payment->paymentables,
+            // ];
 
             return [
                 'transaction_reference' => $payment->transaction_reference,
                 'transaction_response' => $payment_response,
                 'success' => false,
-                'description' => $message,
+                'description' => $error_msg,
                 'code' => $payment_response->statusCode
             ];
         }
@@ -142,7 +142,7 @@ class ExactPaymentDriver extends BaseDriver
         $refund_request->referencedPayment = new Shared\ReferencedPayment();
         $refund_request->referencedPayment->amount = (int)($amount * 100);
         $refund_request->referencedPayment->authorization = $authorization;
-        $refund_request->accountId = $this->company_gateway->getConfigField("organizationId");
+        $refund_request->accountId = $this->company_gateway->getConfigField("accountid");
         $refund_request->paymentId = $payment->transaction_reference;
         
         try {
@@ -152,7 +152,7 @@ class ExactPaymentDriver extends BaseDriver
                 ['request' => $refund_request],
                 SystemLog::CATEGORY_GATEWAY_RESPONSE,
                 SystemLog::EVENT_GATEWAY_FAILURE,
-                SystemLog::TYPE_FORTE,
+                SystemLog::TYPE_EXACT,
                 $this->client,
                 $this->client->company,
             );
@@ -182,7 +182,7 @@ class ExactPaymentDriver extends BaseDriver
             $message,
             SystemLog::CATEGORY_GATEWAY_RESPONSE,
             SystemLog::EVENT_GATEWAY_SUCCESS,
-            SystemLog::TYPE_FORTE,
+            SystemLog::TYPE_EXACT,
             $this->client,
             $this->client->company,
         );
