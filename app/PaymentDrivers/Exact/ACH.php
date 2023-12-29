@@ -215,8 +215,6 @@ class ACH
             $url = "https://api-p2.exactpay.com/account/.$this->exact_accountid./payment-method";
         } 
 
-        // $url = "http://localhost:8008/account/.$this->forte_organization_id./payment-method";
-
         $body = '{
             "type": "ach",
             "ach": {
@@ -251,7 +249,6 @@ class ACH
             CURLOPT_CUSTOMREQUEST => 'POST',
             CURLOPT_POSTFIELDS =>"'.$body.'",
             CURLOPT_HTTPHEADER => [
-                'X-Forte-Auth-Organization-Id: '.$this->exact_accountid,
                 'Content-Type: application/json',
                 'Authorization: '.$this->exact_api_key,
             ],

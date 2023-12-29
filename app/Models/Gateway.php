@@ -219,8 +219,8 @@ class Gateway extends StaticModel
                 ]; //Paypal PPCP
             case 66:
                 return [
-                    GatewayType::CREDIT_CARD => ['refund' => true, 'token_billing' => false], // Exact
-                    GatewayType::BANK_TRANSFER => ['refund' => true, 'token_billing' => false, 'webhooks' => [' ']],
+                    GatewayType::CREDIT_CARD => ['refund' => true, 'token_billing' => true], // Exact
+                    GatewayType::BANK_TRANSFER => ['refund' => true, 'token_billing' => true, 'webhooks' => [' ']],
                 ];
 
             default:
