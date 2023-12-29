@@ -1,8 +1,6 @@
 @extends('portal.ninja2020.layout.payments', ['gateway_title' => ctrans('texts.payment_type_credit_card'), 'card_title' => ctrans('texts.payment_type_credit_card')])
 
 @section('gateway_head')
-
-
     <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
     <script src="{{ asset('js/clients/payments/card-js.min.js') }}"></script>
 
@@ -46,7 +44,7 @@
         @endisset
 
         <label>
-            <a href="http://localhost:8000/client/payment_methods/create?method=1" class="button button-primary bg-primary" style="font-size: .7rem;
+            <a href="{{route('client.payment_methods.create')}}?method=1" class="button button-primary bg-primary" style="font-size: .7rem;
     padding: .5rem 0.5rem;
     background-color: #9ebed9;">
                 <!-- <input
