@@ -49,8 +49,8 @@ class ACH
     {
         $this->exact = $exact;
 
-        $this->exact_api_key = $this->exact->company_gateway->getConfigField('Apikey');
-        $this->exact_accountid =  $this->exact->company_gateway->getConfigField('Accountid');
+        $this->exact_api_key = $this->exact->company_gateway->getConfigField('apikey');
+        $this->exact_accountid =  $this->exact->company_gateway->getConfigField('accountid');
 
         $test_mode = $this->exact->company_gateway->getConfigField('testMode');
 
@@ -92,6 +92,7 @@ class ACH
     public function authorizeResponse(Request $request)
     {
         $test = $this->createACHToken($request->routingNumber, $request->accountNumber, "checking");
+        var_dump($test['request']);
 
         if ($test['statuscode'] != 200) {
             return $this->exact->handleResponseError($test['statuscode'], $test['response'], $test['request']);
@@ -104,9 +105,18 @@ class ACH
         $payment_meta->exp_year = '-';
         $payment_meta->type = GatewayType::BANK_TRANSFER;
 
+        SystemLogger::dispatch(
+            ['response' => $test['response']],
+            SystemLog::CATEGORY_GATEWAY_RESPONSE,
+            SystemLog::EVENT_GATEWAY_SUCCESS,
+            SystemLog::TYPE_EXACT,
+            $this->exact->client,
+            $this->exact->client->company,
+        );
+
         $data = [
             'payment_meta' => $payment_meta,
-            'token' => $test['response']['token'],
+            'token' => $test['response']->token,
             'payment_method_id' => $request->gateway_type_id,
         ];
 
@@ -210,10 +220,12 @@ class ACH
     private function createACHToken($routingNumber, $accountNumber, $accountType)
     {
         if ($this->exact->company_gateway->getConfigField('testMode')) {
-            $url = "https://api.exactpaysandbox.com/account/.$this->exact_accountid./payment-method";
+            $url = "https://api.exactpaysandbox.com/account/$this->exact_accountid/payment-method";
         } else {
-            $url = "https://api-p2.exactpay.com/account/.$this->exact_accountid./payment-method";
+            $url = "https://api-p2.exactpay.com/account/$this->exact_accountid/payment-method";
         } 
+
+        // $url = "http://localhost:8080";
 
         $body = '{
             "type": "ach",
@@ -236,6 +248,11 @@ class ACH
             }
         }';
 
+        $headers = array(
+            "Content-Type: application/json",
+            "Authorization: $this->exact_api_key",
+        );
+
         try {
             $curl = curl_init();
             curl_setopt_array($curl, [
@@ -247,11 +264,8 @@ class ACH
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS =>"'.$body.'",
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json',
-                'Authorization: '.$this->exact_api_key,
-            ],
+            CURLOPT_POSTFIELDS =>$body,
+            CURLOPT_HTTPHEADER => $headers,
             ]);
 
             $response = curl_exec($curl);
