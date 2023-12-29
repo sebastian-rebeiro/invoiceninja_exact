@@ -133,11 +133,11 @@ class ACH
      */
     public function paymentView(array $data)
     {
-        // $this->exact->payment_hash->data = array_merge((array) $this->exact->payment_hash->data, $data);
-        // $this->exact->payment_hash->save();
+        $this->exact->payment_hash->data = array_merge((array) $this->exact->payment_hash->data, $data);
+        $this->exact->payment_hash->save();
 
         $data['gateway'] = $this->exact;
-        return render('gateways.exact.credit_card.pay', $data);
+        return render('gateways.exact.ach.pay', $data);
     }
 
     /**
@@ -148,55 +148,65 @@ class ACH
      */
     public function paymentResponse(PaymentResponseRequest $request)
     {
-        // $payment_hash = PaymentHash::where('hash', $request->input('payment_hash'))->firstOrFail();
-        // $invoice_totals = $payment_hash->data->total->invoice_totals;
-        // // $this->cdebug(['data' => $payment_hash]);
-        // $token = $payment_hash->data->tokens[(int)$payment_hash->data->payment_method_id - 1];
+        $payment_hash = PaymentHash::where('hash', $request->input('payment_hash'))->firstOrFail();
+        $invoice_totals = $payment_hash->data->total->invoice_totals;
+        SystemLogger::dispatch(
+            ['payment_hash' => $payment_hash],
+            SystemLog::CATEGORY_GATEWAY_RESPONSE,
+            SystemLog::EVENT_GATEWAY_ERROR,
+            SystemLog::TYPE_EXACT,
+            $this->exact->client,
+            $this->exact->client->company,
+        );
+        $hashed_token = $request->token;
+        $token = current(array_filter($payment_hash->data->tokens, function($token) use ($hashed_token) {
+            return $token->hashed_id === $hashed_token;
+        }));
 
-        // $request = new Operations\AccountPostPaymentRequest();
-        // $request->newPayment = new Shared\NewPayment();
-        // $request->newPayment->amount = (int)($payment_hash->data->amount_with_fee * 100);
-        // $request->newPayment->capture = true;
-        // $request->newPayment->paymentMethod = new Operations\PaymentMethod();
-        // $request->newPayment->paymentMethod->token = $token->token;
-        // $request->accountId = $this->exact_accountid;
+        $request = new Operations\AccountPostPaymentRequest();
+        $request->newPayment = new Shared\NewPayment();
+        $request->newPayment->amount = (int)($payment_hash->data->amount_with_fee * 100);
+        $request->newPayment->capture = true;
+        $request->newPayment->paymentMethod = new Operations\PaymentMethod();
+        $request->newPayment->paymentMethod->token = $token->token;
+        $request->accountId = $this->exact_accountid;
 
-        // try {
-        //     $response = $this->sdk->payments->accountPostPayment($request);
+        try {
+            $response = $this->sdk->payments->accountPostPayment($request);
         //     // $this->cdebug(['request'> $request, 'response' => $response ,'data' => $payment_hash]);
-        // } catch (\Throwable $th) {
-        //     SystemLogger::dispatch(
-        //         ['request' => $request],
-        //         SystemLog::CATEGORY_GATEWAY_RESPONSE,
-        //         SystemLog::EVENT_GATEWAY_FAILURE,
-        //         SystemLog::TYPE_EXACT,
-        //         $this->exact->client,
-        //         $this->exact->client->company,
-        //     );
-        //     throw $th;
-        // }
+        } catch (\Throwable $th) {
+            SystemLogger::dispatch(
+                ['request' => $request],
+                SystemLog::CATEGORY_GATEWAY_RESPONSE,
+                SystemLog::EVENT_GATEWAY_FAILURE,
+                SystemLog::TYPE_EXACT,
+                $this->exact->client,
+                $this->exact->client->company,
+            );
+            throw $th;
+        }
 
-        // if ($response->statusCode != 201) {
-        //     return $this->exact->handleResponseError($response->statusCode, $response, $request);
-        // } 
+        if ($response->statusCode != 201) {
+            return $this->exact->handleResponseError($response->statusCode, $response, $request);
+        } 
             
-        // SystemLogger::dispatch(
-        //     ['response' => $response ,'data' => $payment_hash],
-        //     SystemLog::CATEGORY_GATEWAY_RESPONSE,
-        //     SystemLog::EVENT_GATEWAY_SUCCESS,
-        //     SystemLog::TYPE_EXACT,
-        //     $this->exact->client,
-        //     $this->exact->client->company,
-        // );
+        SystemLogger::dispatch(
+            ['response' => $response ,'data' => $payment_hash],
+            SystemLog::CATEGORY_GATEWAY_RESPONSE,
+            SystemLog::EVENT_GATEWAY_SUCCESS,
+            SystemLog::TYPE_EXACT,
+            $this->exact->client,
+            $this->exact->client->company,
+        );
 
-        // $data = [
-        //     'payment_type' => PaymentType::parseCardType(strtolower($token->meta->brand)) ?: PaymentType::CREDIT_CARD_OTHER,
-        //     'amount' => $payment_hash->data->amount_with_fee,
-        //     'gateway_type_id' => GatewayType::CREDIT_CARD,
-        //     'transaction_reference' => $response->twoHundredAndOneApplicationJsonPayment["paymentId"],
-        //     'custom_value1' => $response->twoHundredAndOneApplicationJsonPayment["authorization"]
-        // ];
-        // $this->exact->createPayment($data, Payment::STATUS_COMPLETED);
+        $data = [
+            'payment_type' => "ACH",
+            'amount' => $payment_hash->data->amount_with_fee,
+            'gateway_type_id' => GatewayType::BANK_TRANSFER,
+            'transaction_reference' => $response->twoHundredAndOneApplicationJsonPayment["paymentId"],
+            'custom_value1' => $response->twoHundredAndOneApplicationJsonPayment["authorization"]
+        ];
+        $this->exact->createPayment($data, Payment::STATUS_COMPLETED);
             
         return redirect('client/invoices')->withSuccess('Invoice paid.');
     }

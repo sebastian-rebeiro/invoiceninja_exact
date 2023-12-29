@@ -48,10 +48,21 @@
         </label>
     @endcomponent
 
-    @include('portal.ninja2020.gateways.includes.pay_now')
+    @include('portal.ninja2020.gateways.exact.includes.pay_now')
 
 @endsection
 
 @section('gateway_footer')
-    @vite('resources/js/clients/payments/forte-ach-payment.js')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var radioButtons = document.querySelectorAll('input[name="payment-type"]');
+        radioButtons.forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    document.getElementById('token').value = this.getAttribute('data-token');
+                }
+            });
+        });
+    });
+</script>
 @endsection
