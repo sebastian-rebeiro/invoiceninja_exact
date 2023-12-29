@@ -65,6 +65,18 @@
 @endsection
 
 @section('gateway_footer')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var radioButtons = document.querySelectorAll('input[name="payment-type"]');
+            radioButtons.forEach(function(radio) {
+                radio.addEventListener('change', function() {
+                    if (this.checked) {
+                        document.getElementById('token').value = this.getAttribute('data-token');
+                    }
+                });
+            });
+        });
+    </script>
     @if($gateway->company_gateway->getConfigField('testMode'))
         <!-- <script src="https://jstest.authorize.net/v1/Accept.js" charset="utf-8"></script> -->
     @else

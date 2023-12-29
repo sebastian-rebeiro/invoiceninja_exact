@@ -146,7 +146,10 @@ class CreditCard
         $payment_hash = PaymentHash::where('hash', $request->input('payment_hash'))->firstOrFail();
         $invoice_totals = $payment_hash->data->total->invoice_totals;
         // $this->cdebug(['data' => $payment_hash]);
-        $token = $payment_hash->data->tokens[(int)$payment_hash->data->payment_method_id - 1];
+        $hashed_token = $request->token;
+        $token = current(array_filter($payment_hash->data->tokens, function($token) use ($hashed_token) {
+            return $token->hashed_id === $hashed_token;
+        }));
 
         $request = new Operations\AccountPostPaymentRequest();
         $request->newPayment = new Shared\NewPayment();
