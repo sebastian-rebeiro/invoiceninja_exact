@@ -27,14 +27,25 @@
     @include('portal.ninja2020.gateways.includes.payment_details')
 
     @component('portal.ninja2020.components.general.card-element', ['title' => 'Pay with Bank Transfer'])
-        <div class="bg-white px-4 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
-            style="display: flex!important; justify-content: center!important;">
-            <input class="input w-full" id="routing-number" type="text" placeholder="{{ctrans('texts.routing_number')}}" required>
-        </div>
-        <div class="bg-white px-4 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
-            style="display: flex!important; justify-content: center!important;">
-            <input class="input w-full" id="account-number" type="text" placeholder="{{ctrans('texts.account_number')}}" required>
-        </div>
+    @if(count($tokens) > 0)
+            @foreach($tokens as $token)
+                <label class="mr-4">
+                    <input
+                        type="radio"
+                        data-token="{{ $token->hashed_id }}"
+                        name="payment-type"
+                        class="form-radio cursor-pointer toggle-payment-with-token"/>
+                        <button class="ml-1 cursor-pointer">**** {{ optional($token->meta)->last4 }}</button>
+                    </label>
+            @endforeach
+        @endisset
+        <label>
+            <a href="{{route('client.payment_methods.create')}}?method=2" class="button button-primary bg-primary" style="font-size: .7rem;
+    padding: .5rem 0.5rem;
+    background-color: #9ebed9;">
+                <span class="ml-1 cursor-pointer">Connect New Account</span>
+            </a>
+        </label>
     @endcomponent
 
     @include('portal.ninja2020.gateways.includes.pay_now')
