@@ -11,6 +11,7 @@
 
 namespace App\PaymentDrivers;
 
+use App\Http\Requests\Payments\PaymentWebhookRequest;
 use App\Jobs\Util\SystemLogger;
 use App\Models\GatewayType;
 use App\Models\Payment;
@@ -194,6 +195,28 @@ class ExactPaymentDriver extends BaseDriver
             'description' => $payment->paymentables,
             'code' => $response->statusCode,
         ];
+    }
+
+    public function processWebhookRequest(PaymentWebhookRequest $request) {
+        if ($request->type === 'payment.settle') {
+            $body = $request->all();
+
+            $payment = Payment::query()
+            ->where('transaction_reference', $body['paymentid'])
+            ->where('company_id', $request->getCompany()->id)
+            ->first();
+
+            $payment_status = match ($body['status']) {
+                "success" => Payment::STATUS_COMPLETED,
+                "failed" => Payment::STATUS_FAILED
+            };
+
+            $payment->status_id = $payment_status;
+            $payment->save();
+
+            return response()->json(['payment'=>$payment], 200);
+        }
+        return response()->json(['status'=>'Reached'], 200);
     }
 
     public function handleResponseError(int $statuscode, mixed $response, mixed $request, bool $message = false)
