@@ -13,6 +13,7 @@
 namespace App\PaymentDrivers\Exact;
 
 use App\Http\Requests\ClientPortal\Payments\PaymentResponseRequest;
+use App\Exceptions\PaymentFailed;
 use App\Jobs\Util\SystemLogger;
 use App\Models\GatewayType;
 use App\Models\Payment;
@@ -177,6 +178,26 @@ class CreditCard
         if ($response->statusCode != 201) {
             return $this->exact->handleResponseError($response->statusCode, $response, $request);
         } 
+
+        if ($response->twoHundredAndOneApplicationJsonPayment["bankResponse"]['code'] != 'AA') {
+            SystemLogger::dispatch(
+                ['response' => $response ,'data' => $payment_hash],
+                SystemLog::CATEGORY_GATEWAY_RESPONSE,
+                SystemLog::EVENT_GATEWAY_SUCCESS,
+                SystemLog::TYPE_EXACT,
+                $this->exact->client,
+                $this->exact->client->company,
+            );
+            $data = [
+                'payment_type' => PaymentType::parseCardType(strtolower($token->meta->brand)) ?: PaymentType::CREDIT_CARD_OTHER,
+                'amount' => $payment_hash->data->amount_with_fee,
+                'gateway_type_id' => GatewayType::CREDIT_CARD,
+                'transaction_reference' => $response->twoHundredAndOneApplicationJsonPayment["paymentId"],
+            ];
+            $this->exact->createPayment($data, Payment::STATUS_FAILED);
+
+            throw new PaymentFailed($response->twoHundredAndOneApplicationJsonPayment["bankResponse"]['message'], 500);
+        }
             
         SystemLogger::dispatch(
             ['response' => $response ,'data' => $payment_hash],
