@@ -220,7 +220,8 @@ class Gateway extends StaticModel
             case 66:
                 return [
                     GatewayType::CREDIT_CARD => ['refund' => true, 'token_billing' => true], // Exact
-                    GatewayType::BANK_TRANSFER => ['refund' => true, 'token_billing' => true, 'webhooks' => [' ']],
+                    GatewayType::BANK_TRANSFER => ['refund' => true, 'token_billing' => true, 'webhooks' => ['payment.settle']],
+                    GatewayType::ACSS => ['refund' => true, 'token_billing' => true, 'webhooks' => ['payment.settle']],
                 ];
 
             default:

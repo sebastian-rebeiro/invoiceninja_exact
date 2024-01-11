@@ -18,6 +18,7 @@ use App\Models\Payment;
 use App\Models\SystemLog;
 use App\PaymentDrivers\Exact\ACH;
 use App\PaymentDrivers\Exact\CreditCard;
+use App\PaymentDrivers\Exact\Webhooks;
 use App\Utils\Traits\MakesHash;
 
 use \TheLogicStudio\ExactPayments;
@@ -41,6 +42,7 @@ class ExactPaymentDriver extends BaseDriver
     public static $methods = [
         GatewayType::CREDIT_CARD => CreditCard::class,
         GatewayType::BANK_TRANSFER => ACH::class, //maps GatewayType => Implementation class
+        GatewayType::ACSS => ACH::class,
     ];
 
     /**
@@ -52,6 +54,7 @@ class ExactPaymentDriver extends BaseDriver
 
         $types[] = GatewayType::CREDIT_CARD;
         $types[] = GatewayType::BANK_TRANSFER;
+        $types[] = GatewayType::ACSS;
 
         return $types;
     }
@@ -198,25 +201,16 @@ class ExactPaymentDriver extends BaseDriver
     }
 
     public function processWebhookRequest(PaymentWebhookRequest $request) {
-        if ($request->type === 'payment.settle') {
-            $body = $request->all();
+        $handler = new Webhooks($request);
 
-            $payment = Payment::query()
-            ->where('transaction_reference', $body['paymentid'])
-            ->where('company_id', $request->getCompany()->id)
-            ->first();
-
-            $payment_status = match ($body['status']) {
-                "success" => Payment::STATUS_COMPLETED,
-                "failed" => Payment::STATUS_FAILED
-            };
-
-            $payment->status_id = $payment_status;
-            $payment->save();
-
-            return response()->json(['payment'=>$payment], 200);
-        }
-        return response()->json(['status'=>'Reached'], 200);
+        $webhook = $request->type;
+        $response = match ($webhook) {
+            'payment.settle' => $handler->settlepayment(),
+            default => response()->json(['status'=>'Reached'], 200)
+        }; 
+        
+        return $response;
+        // return response()->json(['status'=>'Reached'], 200);
     }
 
     public function handleResponseError(int $statuscode, mixed $response, mixed $request, bool $message = false)
